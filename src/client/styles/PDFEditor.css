@@ -1,0 +1,457 @@
+.pdf-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f0f0f0;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e1e4e8;
+  margin-bottom: 20px;
+}
+
+.editor-container {
+  flex: 1;
+  position: relative;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+}
+
+/* TinyMCE specific styles */
+.tox.tox-tinymce {
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+.tox.tox-tinymce.tox-fullscreen {
+  z-index: 1000;
+}
+
+.tox .tox-toolbar__group {
+  padding: 0 4px !important;
+  border: none !important;
+}
+
+.tox .tox-toolbar {
+  background: none !important;
+  border: none !important;
+}
+
+.tox .tox-toolbar__primary {
+  background: white !important;
+  border-bottom: 1px solid #ddd !important;
+}
+
+/* PDF page styles */
+.pdf-page {
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  padding: 0;
+  border: 1px solid #ddd;
+  position: relative;
+}
+
+.pdf-page p {
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.pdf-page img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Alignment classes */
+.align-left {
+  text-align: left !important;
+}
+
+.align-center {
+  text-align: center !important;
+}
+
+.align-right {
+  text-align: right !important;
+}
+
+.align-justify {
+  text-align: justify !important;
+}
+
+/* Navigation controls */
+.page-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.page-navigation button {
+  padding: 0.5rem 1rem;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.page-navigation button:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.page-navigation button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-navigation span {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Loading state */
+.loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 30px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  max-width: 500px;
+}
+
+/* File input styling */
+.file-input {
+  padding: 8px 12px;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-input:hover {
+  background-color: #f0f2f5;
+  border-color: #d1d5db;
+}
+
+/* Editor content styles */
+.tox-edit-area__iframe {
+  background-color: #f0f0f0 !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .page-navigation {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Ensure content is centered */
+.pdf-editor-body {
+  margin: 0 !important;
+  padding: 20px !important;
+  background-color: #f0f0f0 !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-input {
+    width: 100%;
+  }
+
+  .page-navigation {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .page-navigation span {
+    order: 2;
+    width: 100%;
+    text-align: center;
+    margin: 0.5rem 0;
+  }
+}
+
+/* PDF Content Styles */
+.pdf-content {
+  position: relative;
+  min-height: 1000px;
+  background-color: white;
+  padding: 40px;
+  margin: 0 auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-content span {
+  position: absolute;
+  transform-origin: left top;
+  white-space: pre;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+}
+
+/* TinyMCE Editor Customization */
+.tox-tinymce {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 4px !important;
+}
+
+.tox-tinymce iframe {
+  background-color: white !important;
+}
+
+/* Ensure content stays within bounds */
+.tox-tinymce-aux {
+  z-index: 9999;
+}
+
+/* Fix editor content alignment */
+.mce-content-body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background-color: #f0f0f0 !important;
+  min-height: 100vh !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  overflow-y: auto !important;
+}
+
+/* Ensure PDF page is centered */
+.mce-content-body .pdf-page {
+  margin: 0 auto !important;
+  transform-origin: top center !important;
+  background-color: white !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+/* Remove any unwanted margins from paragraphs */
+.mce-content-body p {
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  transform-origin: top left !important;
+}
+
+/* Ensure editor takes full height in fullscreen */
+.tox.tox-tinymce.tox-fullscreen .tox-edit-area,
+.tox.tox-tinymce.tox-fullscreen .tox-edit-area__iframe {
+  height: 100% !important;
+}
+
+.pdf-editor .export-button {
+  padding: 8px 16px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pdf-editor .export-button:hover:not(:disabled) {
+  background-color: #357abd;
+}
+
+.pdf-editor .export-button:disabled {
+  background-color: #a8c7eb;
+  cursor: not-allowed;
+}
+
+.pdf-editor .nav-button {
+  padding: 8px 16px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.pdf-editor .nav-button:hover:not(:disabled) {
+  background-color: #357abd;
+}
+
+.pdf-editor .nav-button:disabled {
+  background-color: #a8c7eb;
+  color: white;
+  cursor: not-allowed;
+}
+
+.pdf-editor .page-info {
+  color: #000000;
+  font-size: 14px;
+  padding: 0 10px;
+}
+
+/* Bottom navigation buttons */
+.bottom-navigation {
+  position: fixed;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 50px;
+  z-index: 1000;
+  pointer-events: none; /* This allows clicking through the container */
+}
+
+.bottom-nav-button {
+  pointer-events: auto; /* This makes the buttons clickable */
+  padding: 10px 20px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
+}
+
+.bottom-nav-button:hover:not(:disabled) {
+  background-color: #357abd;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+  opacity: 1;
+}
+
+.bottom-nav-button:disabled {
+  background-color: #a8c7eb;
+  color: white;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Make sure bottom navigation is visible in fullscreen mode */
+.tox-fullscreen .bottom-navigation {
+  z-index: 10001; /* Higher than TinyMCE fullscreen z-index */
+}
+
+/* Ensure the buttons are visible in fullscreen mode */
+.tox-fullscreen .editor-container .bottom-navigation {
+  display: flex !important;
+}
+
+/* OCR Processing styles */
+.ocr-progress {
+  font-size: 16px;
+  margin-bottom: 10px;
+  color: #4a90e2;
+  font-weight: 500;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 10px;
+  background-color: #e1e4e8;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4a90e2;
+  transition: width 0.3s ease;
+}
+
+/* PDF paragraph styles */
+.pdf-paragraph {
+  margin-bottom: 1em;
+  text-align: justify;
+}
+
+.pdf-paragraph p {
+  margin: 0 0 0.5em 0;
+}
+
+/* Image container styles */
+.image-container {
+  position: relative;
+}
+
+.image-container img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ocr-text {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 5px;
+  font-size: 14px;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+/* Server OCR text styles */
+.server-ocr-text {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 6px;
+  margin-top: 20px;
+  border: 1px solid #e1e4e8;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+} 
