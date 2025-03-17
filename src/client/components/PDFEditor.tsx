@@ -8,8 +8,8 @@ import { createWorker } from 'tesseract.js';
 // Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
-// TinyMCE API Key
-const TINYMCE_API_KEY = 'f1tx56c31hjm3x5zrk6i9jc89s20ha67t6wgqes00tc004tj';
+// TinyMCE API Key from environment variables
+const TINYMCE_API_KEY = process.env.TINYMCE_API_KEY || '';
 
 // Initialize Tesseract worker for OCR
 let tesseractWorker: any = null;
