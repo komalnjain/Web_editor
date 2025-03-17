@@ -8,10 +8,22 @@ import { createWorker } from 'tesseract.js';
 // Initialize PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
-// TinyMCE API Key
-const TINYMCE_API_KEY = 'f1tx56c31hjm3x5zrk6i9jc89s20ha67t6wgqes00tc004tj';
+// TinyMCE API Key - Use environment variable
+const TINYMCE_API_KEY = process.env.REACT_APP_TINYMCE_API_KEY || '';
 
 // Initialize Tesseract worker for OCR
+let tesseractWorker: any = null;
+
+// Initialize Tesseract worker for OCR (optional)
+let tesseractWorker: any = null;
+
+// Initialize PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+
+// TinyMCE API Key - Use environment variable
+const TINYMCE_API_KEY = process.env.REACT_APP_TINYMCE_API_KEY || '';
+
+// Initialize Tesseract worker for OCR (optional)
 let tesseractWorker: any = null;
 
 interface PDFPage {
@@ -44,23 +56,20 @@ const PDFEditor: React.FC = () => {
     const initTesseract = async () => {
       if (!tesseractWorker) {
         try {
-          // Create worker without any options to avoid DataCloneError
+          // Create worker with English language
           tesseractWorker = await createWorker();
           
-          // Set up progress tracking after worker creation
-          if (tesseractWorker.setProgressHandler) {
-            tesseractWorker.setProgressHandler((m: any) => {
-              if (m.status === 'recognizing text') {
-                setOcrProgress(parseInt((m.progress * 100).toString(), 10));
-              }
-            });
-          } else {
-            // Fallback for older versions or different implementations
-            console.log('Progress handler not available on this Tesseract worker');
-          }
-          
+          // Initialize with progress tracking
           await tesseractWorker.loadLanguage('eng');
           await tesseractWorker.initialize('eng');
+          
+          // Set progress handler
+          tesseractWorker.setProgressHandler((progress: any) => {
+            if (progress.status === 'recognizing text') {
+              setOcrProgress(parseInt((progress.progress * 100).toString(), 10));
+            }
+          });
+          
           console.log('Tesseract worker initialized in client');
         } catch (error) {
           console.error('Failed to initialize Tesseract worker in client:', error);
@@ -79,16 +88,27 @@ const PDFEditor: React.FC = () => {
     };
   }, []);
 
+  // Initialize Tesseract worker (simplified)
+  useEffect(() => {
+    console.log('OCR functionality is disabled to simplify the application.');
+    
+    // No cleanup needed
+    return () => {};
+  }, []);
+
   const extractImages = async (page: pdfjsLib.PDFPageProxy, viewport: pdfjsLib.PageViewport) => {
     const operatorList = await page.getOperatorList();
     const images: Array<{dataUrl: string; width: number; height: number; x: number; y: number}> = [];
     
     try {
+      // Enhanced image extraction with better error handling and retry logic
+      console.log('Starting image extraction for page');
+      
       // Create a delay function to wait for objects to be resolved
       const waitForObject = async (ref: string) => {
         let attempts = 0;
-        const maxAttempts = 50; // Increased attempts further
-        const delay = 150; // Increased delay for better reliability
+        const maxAttempts = 100; // Increased attempts for better reliability
+        const delay = 100; // Shorter delay but more attempts
 
         while (attempts < maxAttempts) {
           const obj = page.objs.get(ref);
@@ -109,19 +129,30 @@ const PDFEditor: React.FC = () => {
 
       // First pass: collect all image references
       const imageRefs: string[] = [];
+      
+      // Look for both paintImageXObject and paintInlineImageXObject operations
       for (let i = 0; i < operatorList.fnArray.length; i++) {
         if (operatorList.fnArray[i] === pdfjsLib.OPS.paintImageXObject) {
           const imageRef = operatorList.argsArray[i][0];
           if (!processedRefs.has(imageRef)) {
             imageRefs.push(imageRef);
-          processedRefs.add(imageRef);
+            processedRefs.add(imageRef);
           }
+        } else if (operatorList.fnArray[i] === pdfjsLib.OPS.paintInlineImageXObject) {
+          // Handle inline images if they exist
+          console.log('Found inline image at operator index', i);
+          // These are directly embedded in the PDF content stream
+          // We'll need to handle them differently
         }
       }
 
+      console.log(`Found ${imageRefs.length} image references`);
+
       // Process all images with a longer timeout
-      await Promise.all(imageRefs.map(async (imageRef) => {
+      await Promise.all(imageRefs.map(async (imageRef, index) => {
         try {
+          console.log(`Processing image ${index + 1}/${imageRefs.length}: ${imageRef}`);
+          
           // Check if image is in cache
           if (imageCache.has(imageRef)) {
             const cachedImage = imageCache.get(imageRef)!;
@@ -180,20 +211,25 @@ const PDFEditor: React.FC = () => {
             if (imageCache.has(imageRef)) return;
           }
           
-            const imgData = await waitForObject(imageRef);
+          // Wait for the image object to be available
+          const imgData = await waitForObject(imageRef);
+          console.log(`Retrieved image data for ${imageRef}`, imgData ? 'success' : 'failed');
 
-            if (imgData && (imgData as any).data) {
-              const imageCanvas = document.createElement('canvas');
+          if (imgData && (imgData as any).data) {
+            console.log(`Image dimensions: ${(imgData as any).width}x${(imgData as any).height}`);
+            
+            // Create a canvas to draw the image
+            const imageCanvas = document.createElement('canvas');
             const imageCtx = imageCanvas.getContext('2d', { willReadFrequently: true })!;
-              
-              // Set canvas dimensions to image dimensions
-              imageCanvas.width = (imgData as any).width;
-              imageCanvas.height = (imgData as any).height;
-              
-              // Create ImageData and draw to canvas
-              const imgArray = new Uint8ClampedArray((imgData as any).data);
-              const imgData2 = new ImageData(imgArray, (imgData as any).width, (imgData as any).height);
-              imageCtx.putImageData(imgData2, 0, 0);
+            
+            // Set canvas dimensions to image dimensions
+            imageCanvas.width = (imgData as any).width;
+            imageCanvas.height = (imgData as any).height;
+            
+            // Create ImageData and draw to canvas
+            const imgArray = new Uint8ClampedArray((imgData as any).data);
+            const imgData2 = new ImageData(imgArray, (imgData as any).width, (imgData as any).height);
+            imageCtx.putImageData(imgData2, 0, 0);
 
             // Find the operator that uses this image
             let x = 0;
@@ -206,18 +242,33 @@ const PDFEditor: React.FC = () => {
                 foundOperator = true;
                 // Try to get position from transform matrix if available
                 if (operatorList.argsArray[i].length > 1) {
-                  x = operatorList.argsArray[i][1] * viewport.scale;
-                  y = viewport.height - (operatorList.argsArray[i][2] * viewport.scale) - ((imgData as any).height * viewport.scale);
+                  // Get the transform matrix
+                  const transform = operatorList.argsArray[i].slice(1);
+                  if (transform.length >= 6) {
+                    // PDF transform matrix: [a, b, c, d, e, f]
+                    // where (e,f) is the translation
+                    x = transform[4] * viewport.scale;
+                    y = viewport.height - (transform[5] * viewport.scale) - ((imgData as any).height * viewport.scale);
+                    
+                    console.log(`Image position: (${x}, ${y}) from transform matrix`);
+                  } else {
+                    x = operatorList.argsArray[i][1] * viewport.scale;
+                    y = viewport.height - (operatorList.argsArray[i][2] * viewport.scale) - ((imgData as any).height * viewport.scale);
+                    console.log(`Image position: (${x}, ${y}) from simple coordinates`);
+                  }
                 }
                 break;
               }
             }
             
-            if (!foundOperator) return;
+            if (!foundOperator) {
+              console.warn(`No operator found for image ${imageRef}`);
+              return;
+            }
 
             // Calculate scaled dimensions
-              const scaledWidth = (imgData as any).width * viewport.scale;
-              const scaledHeight = (imgData as any).height * viewport.scale;
+            const scaledWidth = (imgData as any).width * viewport.scale;
+            const scaledHeight = (imgData as any).height * viewport.scale;
 
             // Determine best format based on image characteristics
             // Use PNG for images with transparency or small images, JPEG for photos
@@ -249,19 +300,65 @@ const PDFEditor: React.FC = () => {
             
             // Cache the image
             imageCache.set(imageRef, dataUrl);
-              
-              images.push({
-                dataUrl,
-                width: scaledWidth,
-                height: scaledHeight,
-                x,
-                y
-              });
-            }
-          } catch (error) {
-            console.warn(`Failed to extract image ${imageRef}:`, error);
+            
+            console.log(`Successfully processed image ${imageRef}`);
+            
+            images.push({
+              dataUrl,
+              width: scaledWidth,
+              height: scaledHeight,
+              x,
+              y
+            });
+          } else {
+            console.warn(`Image data not available for ${imageRef}`);
           }
+        } catch (error) {
+          console.warn(`Failed to extract image ${imageRef}:`, error);
+        }
       }));
+      
+      // If no images were found using the standard method, try an alternative approach
+      if (images.length === 0) {
+        console.log('No images found with standard method, trying alternative approach');
+        
+        // Try to get images using the page's getOperatorList and render them
+        try {
+          // Get page content as text
+          const textContent = await page.getTextContent();
+          
+          // Render the page to a canvas
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d')!;
+          
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          
+          // Render the page to the canvas
+          const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+          };
+          
+          await page.render(renderContext).promise;
+          
+          // Get the rendered page as an image
+          const pageImage = canvas.toDataURL('image/png');
+          
+          // Add the entire page as an image (as a last resort)
+          images.push({
+            dataUrl: pageImage,
+            width: viewport.width,
+            height: viewport.height,
+            x: 0,
+            y: 0
+          });
+          
+          console.log('Added full page render as fallback image');
+        } catch (renderError) {
+          console.error('Failed to render page as fallback:', renderError);
+        }
+      }
     } catch (error) {
       console.warn('Failed to extract images:', error);
     }
@@ -297,6 +394,12 @@ const PDFEditor: React.FC = () => {
     } finally {
       setIsOcrProcessing(false);
     }
+  };
+
+  // Add OCR processing function (simplified)
+  const processImageWithOCR = async (imageDataUrl: string) => {
+    console.log('OCR processing is disabled to simplify the application.');
+    return '';
   };
 
   const renderPage = async (pdf: pdfjsLib.PDFDocumentProxy, pageNumber: number): Promise<PDFPage | null> => {
@@ -335,6 +438,8 @@ const PDFEditor: React.FC = () => {
             return [];
           })
         ]);
+        
+        console.log(`Page ${pageNumber}: Got ${textContent.items.length} text items and ${images.length} images`);
         
         // Create HTML content with proper text positioning
         let htmlContent = `<div class="pdf-page" contenteditable="true" style="
@@ -408,38 +513,105 @@ const PDFEditor: React.FC = () => {
           lines.push(currentLine);
         }
 
-        // Process each line
-        lines.forEach(line => {
-          if (line.length === 0) return;
-          
-          const fontSize = Math.abs(line[0].transform[0]) * scale;
-          
-          htmlContent += `<p style="
-            margin: 0 0 0.2em 0;
-            padding: 0;
-            font-size: ${fontSize}px;
-            line-height: 1.3;
-            color: #000000;
-            background-color: rgba(255, 255, 255, 0.7);
-          ">`;
-          
-          // Add text content with preserved spacing
-          line.forEach((item: any, index: number) => {
-            if (index > 0) {
-              const prevItem = line[index - 1];
-              const prevX = prevItem.transform[4] + (prevItem.width || 0) * scale;
-              const currentX = item.transform[4];
-              const spacingNeeded = (currentX - prevX) / fontSize;
-              if (spacingNeeded > 0.1) {
-                htmlContent += '&nbsp;'.repeat(Math.round(spacingNeeded));
-              }
+        // Detect tables in the document
+        const tables = detectTables(lines, viewport);
+        console.log(`Detected ${tables.length} tables on page ${pageNumber}`);
+        
+        // Process tables and regular text
+        if (tables.length > 0) {
+          // Mark lines that are part of tables
+          const tableLines = new Set<number>();
+          tables.forEach(table => {
+            for (let i = table.startLine; i <= table.endLine; i++) {
+              tableLines.add(i);
             }
-            
-            htmlContent += item.str;
           });
           
-          htmlContent += '</p>';
-        });
+          // Process lines that are not part of tables
+          let currentLineIndex = 0;
+          
+          while (currentLineIndex < lines.length) {
+            if (tableLines.has(currentLineIndex)) {
+              // Find the table that starts at this line
+              const table = tables.find(t => t.startLine === currentLineIndex);
+              if (table) {
+                // Render the table
+                htmlContent += renderTable(table, lines, viewport, scale);
+                // Skip to after the table
+                currentLineIndex = table.endLine + 1;
+              } else {
+                // This shouldn't happen, but just in case
+                currentLineIndex++;
+              }
+            } else {
+              // Render regular text line
+              const line = lines[currentLineIndex];
+              if (line.length > 0) {
+                const fontSize = Math.abs(line[0].transform[0]) * scale;
+                
+                htmlContent += `<p style="
+                  margin: 0 0 0.2em 0;
+                  padding: 0;
+                  font-size: ${fontSize}px;
+                  line-height: 1.3;
+                  color: #000000;
+                  background-color: rgba(255, 255, 255, 0.7);
+                ">`;
+                
+                // Add text content with preserved spacing
+                line.forEach((item: any, index: number) => {
+                  if (index > 0) {
+                    const prevItem = line[index - 1];
+                    const prevX = prevItem.transform[4] + (prevItem.width || 0) * scale;
+                    const currentX = item.transform[4];
+                    const spacingNeeded = (currentX - prevX) / fontSize;
+                    if (spacingNeeded > 0.1) {
+                      htmlContent += '&nbsp;'.repeat(Math.round(spacingNeeded));
+                    }
+                  }
+                  
+                  htmlContent += item.str;
+                });
+                
+                htmlContent += '</p>';
+              }
+              currentLineIndex++;
+            }
+          }
+        } else {
+          // No tables detected, process lines normally
+          lines.forEach(line => {
+            if (line.length === 0) return;
+            
+            const fontSize = Math.abs(line[0].transform[0]) * scale;
+            
+            htmlContent += `<p style="
+              margin: 0 0 0.2em 0;
+              padding: 0;
+              font-size: ${fontSize}px;
+              line-height: 1.3;
+              color: #000000;
+              background-color: rgba(255, 255, 255, 0.7);
+            ">`;
+            
+            // Add text content with preserved spacing
+            line.forEach((item: any, index: number) => {
+              if (index > 0) {
+                const prevItem = line[index - 1];
+                const prevX = prevItem.transform[4] + (prevItem.width || 0) * scale;
+                const currentX = item.transform[4];
+                const spacingNeeded = (currentX - prevX) / fontSize;
+                if (spacingNeeded > 0.1) {
+                  htmlContent += '&nbsp;'.repeat(Math.round(spacingNeeded));
+                }
+              }
+              
+              htmlContent += item.str;
+            });
+            
+            htmlContent += '</p>';
+          });
+        }
 
         htmlContent += '</div>';
 
@@ -476,6 +648,203 @@ const PDFEditor: React.FC = () => {
       console.error('Error rendering page:', error);
       return null;
     }
+  };
+  
+  // Helper function to detect tables in the document
+  const detectTables = (lines: any[][], viewport: pdfjsLib.PageViewport): Array<{startLine: number, endLine: number, columns: number[][], rows: number}> => {
+    const tables: Array<{startLine: number, endLine: number, columns: number[][], rows: number}> = [];
+    
+    // Minimum number of aligned columns to consider as a table
+    const MIN_COLUMNS = 2;
+    // Minimum number of rows to consider as a table
+    const MIN_ROWS = 2;
+    
+    // Find potential table rows by looking for lines with aligned text
+    let currentTableStart = -1;
+    let currentColumns: number[][] = [];
+    let consecutiveTableRows = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Skip empty lines
+      if (line.length < MIN_COLUMNS) {
+        // If we were in a table and have enough rows, save it
+        if (currentTableStart !== -1 && consecutiveTableRows >= MIN_ROWS) {
+          tables.push({
+            startLine: currentTableStart,
+            endLine: i - 1,
+            columns: currentColumns,
+            rows: consecutiveTableRows
+          });
+        }
+        
+        // Reset table detection
+        currentTableStart = -1;
+        currentColumns = [];
+        consecutiveTableRows = 0;
+        continue;
+      }
+      
+      // Get x-positions of text items in this line
+      const xPositions = line.map((item: any) => item.transform[4]);
+      
+      // If we're not in a table yet, start a new one
+      if (currentTableStart === -1) {
+        currentTableStart = i;
+        // Initialize columns with this line's positions
+        currentColumns = xPositions.map(x => [x]);
+        consecutiveTableRows = 1;
+        continue;
+      }
+      
+      // We're in a potential table, check if this line aligns with previous columns
+      let matchedColumns = 0;
+      const newColumns: number[][] = [];
+      
+      // For each position in this line, find the closest column
+      xPositions.forEach(x => {
+        let bestColumnIndex = -1;
+        let bestDistance = Infinity;
+        
+        // Find the closest column
+        currentColumns.forEach((column, colIndex) => {
+          // Use the average position of the column
+          const avgColPosition = column.reduce((sum, pos) => sum + pos, 0) / column.length;
+          const distance = Math.abs(x - avgColPosition);
+          
+          // If this position is close to a column, consider it part of that column
+          if (distance < bestDistance && distance < 10) { // 10 is the threshold for alignment
+            bestDistance = distance;
+            bestColumnIndex = colIndex;
+          }
+        });
+        
+        if (bestColumnIndex !== -1) {
+          // This position aligns with an existing column
+          matchedColumns++;
+          // Add this position to the column
+          currentColumns[bestColumnIndex].push(x);
+          
+          // Make sure this column is in our new columns array
+          while (newColumns.length <= bestColumnIndex) {
+            newColumns.push([]);
+          }
+          newColumns[bestColumnIndex] = currentColumns[bestColumnIndex];
+        } else {
+          // This position doesn't align with any column, add it as a new column
+          newColumns.push([x]);
+        }
+      });
+      
+      // If we matched enough columns, consider this line part of the table
+      if (matchedColumns >= MIN_COLUMNS) {
+        consecutiveTableRows++;
+        currentColumns = newColumns;
+      } else {
+        // This line doesn't align well, end the current table if we have enough rows
+        if (consecutiveTableRows >= MIN_ROWS) {
+          tables.push({
+            startLine: currentTableStart,
+            endLine: i - 1,
+            columns: currentColumns,
+            rows: consecutiveTableRows
+          });
+        }
+        
+        // Start a new potential table with this line
+        currentTableStart = i;
+        currentColumns = xPositions.map(x => [x]);
+        consecutiveTableRows = 1;
+      }
+    }
+    
+    // Check if we were in a table at the end
+    if (currentTableStart !== -1 && consecutiveTableRows >= MIN_ROWS) {
+      tables.push({
+        startLine: currentTableStart,
+        endLine: lines.length - 1,
+        columns: currentColumns,
+        rows: consecutiveTableRows
+      });
+    }
+    
+    return tables;
+  };
+  
+  // Helper function to render a table
+  const renderTable = (
+    table: {startLine: number, endLine: number, columns: number[][], rows: number},
+    lines: any[][],
+    viewport: pdfjsLib.PageViewport,
+    scale: number
+  ): string => {
+    // Create HTML table
+    let tableHtml = `<table class="pdf-table" style="
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1em 0;
+      font-size: ${Math.abs(lines[table.startLine][0].transform[0]) * scale}px;
+    ">`;
+    
+    // Process each row
+    for (let i = table.startLine; i <= table.endLine; i++) {
+      const line = lines[i];
+      
+      tableHtml += '<tr>';
+      
+      // Group text items by columns
+      const cellContents: string[] = [];
+      
+      // Initialize cells
+      for (let j = 0; j < table.columns.length; j++) {
+        cellContents.push('');
+      }
+      
+      // Assign text items to cells based on their x position
+      line.forEach((item: any) => {
+        const x = item.transform[4];
+        
+        // Find which column this item belongs to
+        let bestColumnIndex = -1;
+        let bestDistance = Infinity;
+        
+        table.columns.forEach((column, colIndex) => {
+          // Use the average position of the column
+          const avgColPosition = column.reduce((sum, pos) => sum + pos, 0) / column.length;
+          const distance = Math.abs(x - avgColPosition);
+          
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestColumnIndex = colIndex;
+          }
+        });
+        
+        if (bestColumnIndex !== -1) {
+          // Add this text to the appropriate cell
+          cellContents[bestColumnIndex] += item.str + ' ';
+        }
+      });
+      
+      // Create table cells
+      cellContents.forEach((content, index) => {
+        // Determine if this is a header cell (first row)
+        const isHeader = i === table.startLine;
+        const cellTag = isHeader ? 'th' : 'td';
+        
+        tableHtml += `<${cellTag} style="
+          border: 1px solid #ddd;
+          padding: 8px;
+          text-align: ${index === 0 ? 'left' : 'center'};
+          ${isHeader ? 'background-color: #f2f2f2; font-weight: bold;' : ''}
+        ">${content.trim()}</${cellTag}>`;
+      });
+      
+      tableHtml += '</tr>';
+    }
+    
+    tableHtml += '</table>';
+    return tableHtml;
   };
 
   const handleEditorChange = (content: string) => {
